@@ -10,7 +10,7 @@ spec:
       name: test-utilities-github-token
     components:
       - name: deployment
-        path: /bundle-artgitifacts/prereqs
+        path: /bundle-artifacts/prereqs
         type: kustomize
   instanced:
     repo: 'https://github.com/thepegasos/cp4waiops-connectors-java-template'
