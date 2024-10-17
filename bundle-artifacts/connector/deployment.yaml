@@ -17,7 +17,7 @@ spec:
         instance: connector
     spec:
       imagePullSecrets:
-        - name: ibm-aiops-pull-secret
+        - name: ibm-aiops-pull-secret-2
       restartPolicy: Always
       serviceAccountName: connector
       affinity:
