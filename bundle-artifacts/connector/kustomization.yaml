@@ -13,7 +13,7 @@ configurations:
 
 images:
   - name: java-grpc-connector-template
-    newName: PLACEHOLDER_REGISTRY_ADDRESS/java-grpc-connector-template
+    newName: siddharthssanghavi/11-10-24-test-sample-java-template
     newTag: latest
 
 vars:
