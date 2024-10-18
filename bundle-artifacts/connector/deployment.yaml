@@ -35,7 +35,7 @@ spec:
                     values:
                       - linux
       initContainers:
-        - image: java-grpc-connector-template:unreleased-main-latest
+        - image: docker.io/siddharthssanghavi/sample-java-template:latest
           imagePullPolicy: Always
           name: cert-setup
           command:
@@ -65,7 +65,7 @@ spec:
             readOnlyRootFilesystem: false
             runAsNonRoot: true
       containers:
-        - image: java-grpc-connector-template:unreleased-main-latest
+        - image: docker.io/siddharthssanghavi/sample-java-template:latest
           imagePullPolicy: Always
           name: java-grpc-connector-template
           env:

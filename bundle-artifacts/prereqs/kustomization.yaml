@@ -10,5 +10,5 @@ configurations:
 
 images:
   - name: java-grpc-connector-template
-    newName: siddharthssanghavi/sample-java-template
+    newName: docker.io/siddharthssanghavi/sample-java-template:latest
     newTag: latest
