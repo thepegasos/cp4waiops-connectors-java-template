@@ -108,7 +108,7 @@ public class ConnectorTemplate extends ConnectorBase {
                     end = String.valueOf(Instant.now().toEpochMilli());
                 }
                 logger.log(Level.INFO,
-                        "Generating sample historical data with metric name: " + configuration.getMetricName());
+                        "CUSTOM NOTE: Generating sample historical data with metric name: " + configuration.getMetricName());
                 generateData(start, end, configuration.getMetricName());
             } catch (ParseException e) {
                 logger.log(Level.INFO, "Error with data generation: " + e.getMessage());
@@ -140,6 +140,7 @@ public class ConnectorTemplate extends ConnectorBase {
 
     @Override
     public void run() {
+        logger.log(Level.INFO, "Entered run function");
         final long NANOSECONDS_PER_SECOND = 1000000000;
         final long TASK_PERIOD_S = 60;
         final long STATUS_UPDATE_PERIOD_S = 150;
@@ -174,6 +175,7 @@ public class ConnectorTemplate extends ConnectorBase {
                 Thread.currentThread().interrupt();
             }
         }
+        logger.log(Level.INFO, "Coming out run");
     }
 
     protected void updateStatus() {
@@ -191,7 +193,7 @@ public class ConnectorTemplate extends ConnectorBase {
     }
 
     protected void generateData(String start, String end, String metricName) {
-
+        logger.log(Level.INFO, "Entered generateData");
         Random random = new Random();
         int interval = 300000;
         Long startdate = Long.parseLong(start);
