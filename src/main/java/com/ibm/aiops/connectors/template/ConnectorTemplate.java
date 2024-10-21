@@ -145,7 +145,7 @@ public class ConnectorTemplate extends ConnectorBase {
 
     @Override
     public void run() {
-        logger.log(Level.INFO, "Entered run function");
+        logger.log(Level.INFO, "Updated: 10/22/24: 12:40 AM Entered run function");
         final long NANOSECONDS_PER_SECOND = 1000000000;
         final long TASK_PERIOD_S = 60;
         final long STATUS_UPDATE_PERIOD_S = 150;
