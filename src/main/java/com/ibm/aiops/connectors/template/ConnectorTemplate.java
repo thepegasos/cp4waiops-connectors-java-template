@@ -79,6 +79,7 @@ public class ConnectorTemplate extends ConnectorBase {
 
     @Override
     public void registerMetrics(MeterRegistry metricRegistry) {
+        logger.log(Level.INFO, "CustomNote: Entered registerMetrics");
         super.registerMetrics(metricRegistry);
         _samplesGathered = metricRegistry.counter("grpc.template.samples.gathered");
         _primesFound = metricRegistry.counter("grpc.template.primes.found");
@@ -88,6 +89,7 @@ public class ConnectorTemplate extends ConnectorBase {
 
     @Override
     public SDKSettings onConfigure(CloudEvent event) throws ConnectorException {
+        logger.log(Level.INFO, "CustomNote: Entered onConfigure");
         ConnectorConfigurationHelper helper = new ConnectorConfigurationHelper(event);
         Configuration configuration = helper.getDataObject(Configuration.class);
         if (configuration == null) {
@@ -121,8 +123,11 @@ public class ConnectorTemplate extends ConnectorBase {
         SDKSettings settings = new SDKSettings();
         settings.consumeTopicNames = new String[] {};
         settings.produceTopicNames = new String[] { LIFECYCLE_INPUT_EVENTS_TOPIC, METRICS_MANAGER_INPUT_TOPIC };
-
+        
+        logger.log(Level.INFO, "CustomNote: coming out of onConfigure");
+        
         return settings;
+        
     }
 
     @Override
@@ -179,6 +184,7 @@ public class ConnectorTemplate extends ConnectorBase {
     }
 
     protected void updateStatus() {
+        logger.log(Level.INFO, "CustomNote: Entered updateStatus");
         final Duration StatusTTL = Duration.ofMinutes(5);
         final Duration LastGatherPeriod = Duration.ofMinutes(3);
 
@@ -190,6 +196,7 @@ public class ConnectorTemplate extends ConnectorBase {
         } else {
             emitStatus(ConnectorStatus.Phase.Running, StatusTTL);
         }
+        logger.log(Level.INFO, "CustomNote: coming out of onConfigure");
     }
 
     protected void generateData(String start, String end, String metricName) {
@@ -250,6 +257,7 @@ public class ConnectorTemplate extends ConnectorBase {
     }
 
     protected void checkCPUThreshold(Configuration config) throws InterruptedException {
+        logger.log(Level.INFO, "CustomNote: Entered checkCPUThreshold");
         String hostname = getHostName();
         String ipAddress = getIPAddress();
         double currentUsage = collectCPUSample();
@@ -300,10 +308,13 @@ public class ConnectorTemplate extends ConnectorBase {
             logger.log(Level.SEVERE, "failed to construct cpu threshold breached cloud event", error);
             _errorsSeen.increment();
         }
+        logger.log(Level.INFO, "CustomNote: Coming out of checkCPUThreshold");
     }
 
     protected EventLifeCycleEvent newCPUThresholdLifeCycleEvent(Configuration config, String hostname, String ipAddress,
             double threshold, double currentUsage) {
+        
+        logger.log(Level.INFO, "CustomNote: Entered EventLifeCycleEvent");
 
         EventLifeCycleEvent event = new EventLifeCycleEvent();
         event.setId(UUID.randomUUID().toString());
@@ -335,11 +346,13 @@ public class ConnectorTemplate extends ConnectorBase {
         resource.put(EventLifeCycleEvent.RESOURCE_IP_ADDRESS_FIELD, ipAddress);
         event.setResource(resource);
 
+
+        logger.log(Level.INFO, "CustomNote: Coming out of EventLifeCycleEvent");
         return event;
     }
 
     protected MetricManagerMetric newMetricGatheredEvent(Configuration config, double value) {
-
+        logger.log(Level.INFO, "CustomNote: Entered MetricManagerMetric");
         MetricManagerMetric metric = new MetricManagerMetric();
         metric.setId(UUID.randomUUID().toString());
         metric.setResourceID(METRIC_RESOURCE_ID);
@@ -354,21 +367,28 @@ public class ConnectorTemplate extends ConnectorBase {
         attributes.put(MetricManagerMetric.RESOURCE_NODE_FIELD, METRIC_RESOURCE_ID);
         metric.setAttributes(attributes);
 
+        logger.log(Level.INFO, "CustomNote: Coming out of MetricManagerMetric");
         return metric;
     }
 
     protected String getHostName() {
+        logger.log(Level.INFO, "CustomNote: Entered getHostName");
         try {
+            logger.log(Level.INFO, "CustomNote: coming out of getHostName, all well");
             return InetAddress.getLocalHost().getHostName();
         } catch (Exception error) {
+            logger.log(Level.INFO, "CustomNote: coming out of getHostName, problem exception");
             return null;
         }
+        
     }
 
     protected String getIPAddress() {
         try {
+            logger.log(Level.INFO, "CustomNote: coming out of getIPAddress, all well");
             return InetAddress.getLocalHost().getHostAddress();
         } catch (Exception error) {
+            logger.log(Level.INFO, "CustomNote: coming out of getHostName, problem exception");
             return null;
         }
     }
