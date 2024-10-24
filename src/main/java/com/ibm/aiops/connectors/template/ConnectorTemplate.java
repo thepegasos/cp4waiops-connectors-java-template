@@ -276,7 +276,7 @@ public class ConnectorTemplate extends ConnectorBase {
         if (config.getEnableGatherMetrics() && config.getIsLiveData()) {
             // Emit event
             try {
-                String scriptPath = "scripts/generate_metric.py";
+                String scriptPath = "/scripts/generate_metric.py";
 
                 // Execute Python script to generate metric JSON
                 String[] command = {
