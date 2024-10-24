@@ -343,7 +343,7 @@ public class ConnectorTemplate extends ConnectorBase {
     
         // Check if threshold has been breached
         if (currentUsage < (double) config.getCpuThreshold()) {
-            logger.log(Level.INFO, "CPU Threshold has been breached, not emitting threshold breach event, returning..");
+            logger.log(Level.INFO, "CPU Threshold has not been breached, not emitting threshold breach event, returning..");
             return;
         }
     
