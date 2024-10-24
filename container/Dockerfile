@@ -23,6 +23,9 @@ RUN dnf install -y procps-ng && dnf clean all
 RUN dnf install -y python3 && dnf clean all
 USER 1001
 
+# Copy the Python script
+COPY --chown=1001:0 scripts/generate_metric.py /scripts/generate_metric.py
+
 COPY --chown=1001:0 container/import-certs.sh /opt/import-certs.sh
 COPY --chown=1001:0 container/jvm.options /config/
 
