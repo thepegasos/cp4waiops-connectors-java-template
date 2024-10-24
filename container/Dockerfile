@@ -20,6 +20,7 @@ FROM --platform=linux/amd64 icr.io/appcafe/websphere-liberty:24.0.0.3-kernel-jav
 
 USER 0
 RUN dnf install -y procps-ng && dnf clean all
+RUN dnf install -y python3 && dnf clean all
 USER 1001
 
 COPY --chown=1001:0 container/import-certs.sh /opt/import-certs.sh
