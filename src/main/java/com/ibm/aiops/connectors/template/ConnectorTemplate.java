@@ -196,7 +196,7 @@ public class ConnectorTemplate extends ConnectorBase {
         } else {
             emitStatus(ConnectorStatus.Phase.Running, StatusTTL);
         }
-        logger.log(Level.INFO, "CustomNote: coming out of onConfigure");
+        logger.log(Level.INFO, "CustomNote: coming out of updateStatus");
     }
 
     protected void generateData(String start, String end, String metricName) {
