@@ -40,6 +40,13 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 import org.json.JSONObject;
 
+// Python script version
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+import java.io.File;
+
 public class ConnectorTemplate extends ConnectorBase {
     static final Logger logger = Logger.getLogger(ConnectorTemplate.class.getName());
 
@@ -255,45 +262,98 @@ public class ConnectorTemplate extends ConnectorBase {
         logger.log(Level.INFO, "Done sending sample data");
 
     }
-
+    
     protected void checkCPUThreshold(Configuration config) throws InterruptedException {
         logger.log(Level.INFO, "CustomNote: Entered checkCPUThreshold");
         String hostname = getHostName();
         String ipAddress = getIPAddress();
         double currentUsage = collectCPUSample();
         _samplesGathered.increment();
-
-        logger.log(Level.INFO, "cpu usage: " + String.valueOf(currentUsage));
-
+    
+        logger.log(Level.INFO, "cpu usage: " + currentUsage);
+    
         // Metric
         if (config.getEnableGatherMetrics() && config.getIsLiveData()) {
             // Emit event
             try {
-                MetricManagerMetric mmmEvent = newMetricGatheredEvent(config, currentUsage);
-                Map<String, ArrayList> group = new HashMap<>();
-                ArrayList<MetricManagerMetric> groupArray = new ArrayList<MetricManagerMetric>();
-                groupArray.add(mmmEvent);
-                group.put("groups", groupArray);
-                String jsonGroup = new ObjectMapper().writeValueAsString(group);
-                CloudEvent ce = CloudEventBuilder.v1().withId(mmmEvent.getId()).withSource(SELF_SOURCE)
+                // Locate the Python script using ClassLoader
+                String scriptPath;
+                try {
+                    File scriptFile = new File(getClass().getClassLoader().getResource("scripts/generate_metric.py").toURI());
+                    scriptPath = scriptFile.getAbsolutePath();
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to locate the Python script in WAR file", e);
+                }
+
+                // Execute Python script to generate metric JSON
+                String[] command = {
+                    "python3",
+                    scriptPath,
+                    config.getMetricName(),
+                    String.valueOf(currentUsage)
+                };
+                
+                ProcessBuilder processBuilder = new ProcessBuilder(command);
+                processBuilder.redirectErrorStream(true); // Redirect error stream to capture errors
+                Process process = processBuilder.start();
+    
+                // Capture output from the Python script
+                StringBuilder jsonBuilder = new StringBuilder();
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        jsonBuilder.append(line);
+                    }
+                }
+    
+                // Wait for the process to finish with a timeout
+                boolean finished = process.waitFor(60, TimeUnit.SECONDS);
+                if (!finished) {
+                    // Process did not finish within the timeout
+                    process.destroy();
+                    throw new RuntimeException("Python script timed out.");
+                }
+    
+                int exitCode = process.exitValue();
+                if (exitCode != 0) {
+                    throw new RuntimeException("Python script exited with code " + exitCode + ". Error: " + jsonBuilder.toString());
+                }
+    
+                String jsonGroup = jsonBuilder.toString().trim();
+                if (jsonGroup.isEmpty()) {
+                    throw new RuntimeException("Python script did not produce any output.");
+                }
+    
+                logger.log(Level.INFO, "Received JSON from Python: " + jsonGroup);
+    
+                // Proceed to use the JSON output
+                CloudEvent ce = CloudEventBuilder.v1().withId(UUID.randomUUID().toString())
+                        .withSource(SELF_SOURCE)
                         .withType(METRIC_GATHERED_CE_TYPE)
                         .withExtension(TENANTID_TYPE_CE_EXTENSION_NAME, Constant.STANDARD_TENANT_ID)
                         .withExtension(CONNECTION_ID_CE_EXTENSION_NAME, getConnectorID())
                         .withExtension(COMPONENT_NAME_CE_EXTENSION_NAME, getComponentName())
-                        .withData(Constant.JSON_CONTENT_TYPE, jsonGroup.getBytes(StandardCharsets.UTF_8)).build();
+                        .withData(Constant.JSON_CONTENT_TYPE, jsonGroup.getBytes(StandardCharsets.UTF_8))
+                        .build();
                 emitCloudEvent(METRICS_MANAGER_INPUT_TOPIC, null, ce);
-            } catch (JsonProcessingException error) {
-                logger.log(Level.SEVERE, "failed to construct metric gathered cloud event", error);
+    
+            } catch (IOException | InterruptedException e) {
+                logger.log(Level.SEVERE, "Failed to execute Python script", e);
+                Thread.currentThread().interrupt(); // Restore interrupted state
+                _errorsSeen.increment();
+            } catch (RuntimeException e) {
+                logger.log(Level.SEVERE, "Runtime exception during Python script execution", e);
                 _errorsSeen.increment();
             }
         }
-
+    
         // Check if threshold has been breached
         if (currentUsage < (double) config.getCpuThreshold()) {
+            logger.log(Level.INFO, "CPU Threshold has been breached, not emitting, returning..");
             return;
         }
-
-        // Emit event
+    
+        // Emit event for threshold breach
         try {
             EventLifeCycleEvent elcEvent = newCPUThresholdLifeCycleEvent(config, hostname, ipAddress,
                     config.getCpuThreshold(), currentUsage);
@@ -302,14 +362,71 @@ public class ConnectorTemplate extends ConnectorBase {
                     .withExtension(TENANTID_TYPE_CE_EXTENSION_NAME, Constant.STANDARD_TENANT_ID)
                     .withExtension(CONNECTION_ID_CE_EXTENSION_NAME, getConnectorID())
                     .withExtension(COMPONENT_NAME_CE_EXTENSION_NAME, getComponentName())
-                    .withData(Constant.JSON_CONTENT_TYPE, elcEvent.toJSON().getBytes(StandardCharsets.UTF_8)).build();
+                    .withData(Constant.JSON_CONTENT_TYPE, elcEvent.toJSON().getBytes(StandardCharsets.UTF_8))
+                    .build();
             emitCloudEvent(LIFECYCLE_INPUT_EVENTS_TOPIC, null, ce);
         } catch (JsonProcessingException error) {
-            logger.log(Level.SEVERE, "failed to construct cpu threshold breached cloud event", error);
+            logger.log(Level.SEVERE, "Failed to construct CPU threshold breached cloud event", error);
             _errorsSeen.increment();
         }
         logger.log(Level.INFO, "CustomNote: Coming out of checkCPUThreshold");
     }
+    
+
+    // protected void checkCPUThreshold(Configuration config) throws InterruptedException {
+    //     logger.log(Level.INFO, "CustomNote: Entered checkCPUThreshold");
+    //     String hostname = getHostName();
+    //     String ipAddress = getIPAddress();
+    //     double currentUsage = collectCPUSample();
+    //     _samplesGathered.increment();
+
+    //     logger.log(Level.INFO, "cpu usage: " + String.valueOf(currentUsage));
+
+    //     // Metric
+    //     if (config.getEnableGatherMetrics() && config.getIsLiveData()) {
+    //         // Emit event
+    //         try {
+    //             MetricManagerMetric mmmEvent = newMetricGatheredEvent(config, currentUsage);
+    //             Map<String, ArrayList> group = new HashMap<>();
+    //             ArrayList<MetricManagerMetric> groupArray = new ArrayList<MetricManagerMetric>();
+    //             groupArray.add(mmmEvent);
+    //             group.put("groups", groupArray);
+    //             String jsonGroup = new ObjectMapper().writeValueAsString(group);
+    //             CloudEvent ce = CloudEventBuilder.v1().withId(mmmEvent.getId()).withSource(SELF_SOURCE)
+    //                     .withType(METRIC_GATHERED_CE_TYPE)
+    //                     .withExtension(TENANTID_TYPE_CE_EXTENSION_NAME, Constant.STANDARD_TENANT_ID)
+    //                     .withExtension(CONNECTION_ID_CE_EXTENSION_NAME, getConnectorID())
+    //                     .withExtension(COMPONENT_NAME_CE_EXTENSION_NAME, getComponentName())
+    //                     .withData(Constant.JSON_CONTENT_TYPE, jsonGroup.getBytes(StandardCharsets.UTF_8)).build();
+    //             emitCloudEvent(METRICS_MANAGER_INPUT_TOPIC, null, ce);
+    //         } catch (JsonProcessingException error) {
+    //             logger.log(Level.SEVERE, "failed to construct metric gathered cloud event", error);
+    //             _errorsSeen.increment();
+    //         }
+    //     }
+
+    //     // Check if threshold has been breached
+    //     if (currentUsage < (double) config.getCpuThreshold()) {
+    //         return;
+    //     }
+
+    //     // Emit event
+    //     try {
+    //         EventLifeCycleEvent elcEvent = newCPUThresholdLifeCycleEvent(config, hostname, ipAddress,
+    //                 config.getCpuThreshold(), currentUsage);
+    //         CloudEvent ce = CloudEventBuilder.v1().withId(elcEvent.getId()).withSource(SELF_SOURCE)
+    //                 .withType(THRESHOLD_BREACHED_CE_TYPE)
+    //                 .withExtension(TENANTID_TYPE_CE_EXTENSION_NAME, Constant.STANDARD_TENANT_ID)
+    //                 .withExtension(CONNECTION_ID_CE_EXTENSION_NAME, getConnectorID())
+    //                 .withExtension(COMPONENT_NAME_CE_EXTENSION_NAME, getComponentName())
+    //                 .withData(Constant.JSON_CONTENT_TYPE, elcEvent.toJSON().getBytes(StandardCharsets.UTF_8)).build();
+    //         emitCloudEvent(LIFECYCLE_INPUT_EVENTS_TOPIC, null, ce);
+    //     } catch (JsonProcessingException error) {
+    //         logger.log(Level.SEVERE, "failed to construct cpu threshold breached cloud event", error);
+    //         _errorsSeen.increment();
+    //     }
+    //     logger.log(Level.INFO, "CustomNote: Coming out of checkCPUThreshold");
+    // }
 
     protected EventLifeCycleEvent newCPUThresholdLifeCycleEvent(Configuration config, String hostname, String ipAddress,
             double threshold, double currentUsage) {

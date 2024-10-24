@@ -45,6 +45,10 @@ configurations {
 
 tasks.war {
 	archiveFileName.set("java-grpc-connector-template.war")
+    // Add scripts directory to the WAR
+    from('src/main/scripts') {
+        into('scripts')
+    }
 }
 
 compileJava {
