@@ -276,14 +276,7 @@ public class ConnectorTemplate extends ConnectorBase {
         if (config.getEnableGatherMetrics() && config.getIsLiveData()) {
             // Emit event
             try {
-                // Locate the Python script using ClassLoader
-                String scriptPath;
-                try {
-                    File scriptFile = new File(getClass().getClassLoader().getResource("scripts/generate_metric.py").toURI());
-                    scriptPath = scriptFile.getAbsolutePath();
-                } catch (Exception e) {
-                    throw new RuntimeException("Failed to locate the Python script in WAR file", e);
-                }
+                String scriptPath = "scripts/generate_metric.py";
 
                 // Execute Python script to generate metric JSON
                 String[] command = {
