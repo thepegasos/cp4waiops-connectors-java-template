@@ -329,6 +329,7 @@ public class ConnectorTemplate extends ConnectorBase {
                         .withData(Constant.JSON_CONTENT_TYPE, jsonGroup.getBytes(StandardCharsets.UTF_8))
                         .build();
                 emitCloudEvent(METRICS_MANAGER_INPUT_TOPIC, null, ce);
+                logger.log(Level.INFO, "Done sending ce that was prepared" + jsonGroup);
     
             } catch (IOException | InterruptedException e) {
                 logger.log(Level.SEVERE, "Failed to execute Python script", e);
@@ -342,7 +343,7 @@ public class ConnectorTemplate extends ConnectorBase {
     
         // Check if threshold has been breached
         if (currentUsage < (double) config.getCpuThreshold()) {
-            logger.log(Level.INFO, "CPU Threshold has been breached, not emitting, returning..");
+            logger.log(Level.INFO, "CPU Threshold has been breached, not emitting threshold breach event, returning..");
             return;
         }
     
